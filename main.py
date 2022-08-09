@@ -20,6 +20,13 @@ userscol = usersdb.users
 app.config['UPLOAD_FOLDER'] = '/files'
 app.config['MAX_CONTENT-PATH'] = 2000000 # Max file size
 
+def get_all_files():
+  files = []
+  for user in userscol.find():
+    for file in user['files']:
+      files.append(file)
+  return files
+
 def get_user(username):
   myquery = {"username": username}
   mydoc = userscol.find(myquery)
@@ -47,6 +54,10 @@ def modify_user(username, count):
 def index():
     return 'Hello World'
 
+@app.route("/all")
+def all_files():
+  return {"files": get_all_files()}
+
 @app.route("/upload", methods=['GET','POST'])
 def upload():
     if request.method == "GET": return redirect('https://replfiles.dillonb07.studio/dashboard')
@@ -55,12 +66,12 @@ def upload():
     username = data['username']
     if get_user(username) != False:
       if get_user(username)['spaceUsed'] > 10000000:
-        return {'error': 'All space has been used.'}
+        return redirect("https://replfiles.dillonb07.studio/dashboard?error=You%20have%20used%20all%20of%20your%2010MB")
     if not os.path.exists("files/" + username):
       os.makedirs("files/" + username)
     file_name = secure_filename(file.filename)
     if os.path.exists("files/" + username + "/" + file_name):
-      return {"Error": "A file with this name already exists"}
+      return redirect('https://replfiles.dillonb07.studio/dashboard?error=You%20%can%20not%20upload%20the%20same%20file%again')
     file.save("files/" + username + "/" + file_name)
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
@@ -85,53 +96,14 @@ def upload():
     user['files'] = files
     userscol.delete_one({"_id": user['_id']})
     userscol.insert_many([user])
-    response = app.response_class(
-        response=json.dumps({"url": "https://replfiles.api.dillonb07.studio/download/" + username + "/" + file_name}),
-        status=200,
-        mimetype='application/json'
-    )
-    return response
+    return redirect('https://replfiles.dillonb07.studio/dashboard')
 
 @app.route("/download/<username>/<filename>")
 def download(username, filename):
   if os.path.exists(f"files/" + username + "/" + filename):
     return send_file(f"files/{username}/" + filename)
   else:
-    return {'error': 'File not found'}
+    return redirect('https://replfiles.dillonb07.studio/dashboard?error=That%20file%20is%20not%20found')
   
 
 app.run(host='0.0.0.0', port=8080, debug=True)
-
-
-"""
-/ - Redirect to https://replfiles.dillonb07.studio
-
-/upload - Upload file and return id
-        - Check if the user (id will be passed through endpoint) has enough space left (limit of 10MB per user)
-
-This also needs to add the file as a JSON object/dict to an array in the User object. Here's an example:
-
-[{
-    "id" : 1,
-    "name": "Test",
-    "description": "Description",
-    "file": "", # preferably a URL here, but however you manage to store the file.
-    "user": 1,
-    "image": "https://storage.googleapis.com/replit/images/1659623175957_1b73bc274040fc62a1d8187144aa17c8.png"
-}, {
-    "id" : 2,
-    "name": "Test 2",
-    "description": "Description 2",
-    "file": "", # preferably a URL here, but however you manage to store the file.
-    "user": 1,
-    "image": "https://storage.googleapis.com/replit/images/1650209136478_ddae1a1e79240cefc81560ad52e2dc00.png"
-}]
-
-/download - Return the file from id
-
-This could just be a URL for the file
-
-/all - Return all files. Preferably in JSON format. This will be used for the moderation page.
-
-NOTE: File can be anything. Not a specific format. If it's easier, we could compress it to a .zip and then store it. Or, should I change it to image-only hosting which should be much easier.
-"""
