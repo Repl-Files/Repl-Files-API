@@ -14,9 +14,34 @@ app = Flask(__name__)
 clientm = pymongo.MongoClient(os.getenv("clientm"))
 database = clientm.Files
 collection = database.Files
+usersdb = clientm.Users
+userscol = usersdb.users
 
 app.config['UPLOAD_FOLDER'] = '/files'
 app.config['MAX_CONTENT-PATH'] = 2000000 # Max file size
+
+def get_user(username):
+  myquery = {"username": username}
+  mydoc = userscol.find(myquery)
+  for x in mydoc:
+    return x
+  return False
+
+def create_user(username, count):
+  doc = [{
+    "username": username,
+    "count": count
+  }]
+  userscol.insert_many(doc)
+
+def modify_user(username, count):
+  userdoc = get_user(username)
+  now_count = userdoc['spaceUsed']
+  new_count = now_count + count
+  del userdoc['spaceUsed']
+  userdoc['spaceUsed'] = new_count
+  userscol.delete_one({"_id": userdoc['_id']})
+  userscol.insert_many([userdoc])
 
 @app.route('/')
 def index():
@@ -25,25 +50,43 @@ def index():
 @app.route("/upload", methods=['GET','POST'])
 def upload():
     if request.method == "GET": return redirect('https://replfiles.dillonb07.studio/dashboard')
-    
     data = request.form
     file = request.files['file']
-    if not os.path.exists("files/" + data['id']):
-      os.makedirs("files/" + data['id'])
+    username = data['username']
+    if get_user(username) != False:
+      if get_user(username)['spaceUsed'] > 10000000:
+        return {'error': 'All space has been used.'}
+    if not os.path.exists("files/" + username):
+      os.makedirs("files/" + username)
     file_name = secure_filename(file.filename)
-    file.save("files/" + data['id'] + "/" + file_name)
-    print(data)
+    if os.path.exists("files/" + username + "/" + file_name):
+      return {"Error": "A file with this name already exists"}
+    file.save("files/" + username + "/" + file_name)
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    if get_user(username) == False:
+      create_user(username, file_size)
+    else:
+      modify_user(username, file_size)
+    user = get_user(username)
     image_url = data.get("imageUrl", "")
-    document = [{
-      "Name": data['name'],
-      "Description": data['description'],
-      "File": "https://replfiles.api.dillonb07.studio/download/" + data['id'] + "/" + file_name,
-      "UserId": data['id'],
-      "ImageUrl": image_url
-    }]
-    collection.insert_many(document)
+    file = {
+      "name": data['name'],
+      "description": data['description'],
+      "filename": file_name,
+      "file": "https://replfiles.api.dillonb07.studio/download/" + username + "/" + file_name,
+      "username": username,
+      "imageUrl": image_url,
+      "fileSize": file_size
+    }
+    files = user['files']
+    files.append(file)
+    del user['files']
+    user['files'] = files
+    userscol.delete_one({"_id": user['_id']})
+    userscol.insert_many([user])
     response = app.response_class(
-        response=json.dumps({"url": "https://replfiles.api.dillonb07.studio/download/" + data['id'] + "/" + file_name}),
+        response=json.dumps({"url": "https://replfiles.api.dillonb07.studio/download/" + username + "/" + file_name}),
         status=200,
         mimetype='application/json'
     )
@@ -54,7 +97,7 @@ def download(username, filename):
   if os.path.exists(f"files/" + username + "/" + filename):
     return send_file(f"files/{username}/" + filename)
   else:
-    return redirect('https://replfiles.dillonb07.studio')
+    return {'error': 'File not found'}
   
 
 app.run(host='0.0.0.0', port=8080, debug=True)
@@ -65,16 +108,6 @@ app.run(host='0.0.0.0', port=8080, debug=True)
 
 /upload - Upload file and return id
         - Check if the user (id will be passed through endpoint) has enough space left (limit of 10MB per user)
-        - Check file is under 2MB. This must be checked on the server to stop people directly accessing the endpoint to upload large files and fill the db
-
-Information coming from form:
-- File Nickname
-- File Description - This may be an empty string
-- Image URL - This may be an empty string
-- File
-- User id
-
-You should be able to get these from the Flask request method (I think that's what it's called)
 
 This also needs to add the file as a JSON object/dict to an array in the User object. Here's an example:
 
