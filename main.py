@@ -64,17 +64,19 @@ def upload():
     data = request.form
     file = request.files['file']
     username = data['username']
-    if get_user(username) != False:
-      if get_user(username)['spaceUsed'] > 10000000:
-        return redirect("https://replfiles.dillonb07.studio/dashboard?error=You%20have%20used%20all%20of%20your%2010MB")
-    if not os.path.exists("files/" + username):
-      os.makedirs("files/" + username)
     file_name = secure_filename(file.filename)
-    if os.path.exists("files/" + username + "/" + file_name):
-      return redirect('https://replfiles.dillonb07.studio/dashboard?error=You%20%can%20not%20upload%20the%20same%20file%again')
     file.save("files/" + username + "/" + file_name)
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
+    if file_size > 2000000:
+      return redirect("https://replfiles.dillonb07.studio/dashboard?type=error&msg=This%20file%20is%20over%202MB")
+    if get_user(username) != False:
+      if get_user(username)['spaceUsed'] > 10000000:
+        return redirect("https://replfiles.dillonb07.studio/dashboard?type=error&msg=You%20have%20used%20all%20of%20your%2010MB")
+    if not os.path.exists("files/" + username):
+      os.makedirs("files/" + username)
+    if os.path.exists("files/" + username + "/" + file_name):
+      return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=You%20can%20not%20upload%20the%20same%20file%20again')
     if get_user(username) == False:
       create_user(username, file_size)
     else:
@@ -96,14 +98,14 @@ def upload():
     user['files'] = files
     userscol.delete_one({"_id": user['_id']})
     userscol.insert_many([user])
-    return redirect('https://replfiles.dillonb07.studio/dashboard')
+    return redirect('https://replfiles.dillonb07.studio/dashboard?type=success&msg=File%20successfully%20uploaded')
 
 @app.route("/download/<username>/<filename>")
 def download(username, filename):
   if os.path.exists(f"files/" + username + "/" + filename):
     return send_file(f"files/{username}/" + filename)
   else:
-    return redirect('https://replfiles.dillonb07.studio/dashboard?error=That%20file%20is%20not%20found')
+    return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=That%20file%20is%20not%20found')
   
 
 app.run(host='0.0.0.0', port=8080, debug=True)
