@@ -1,12 +1,5 @@
-# import test
-# import io
-import ast
 import pymongo
-# import gridfs
-from bson.objectid import ObjectId
-import dns
 import os
-import json
 from flask import Flask, redirect, send_file, request
 from werkzeug.utils import secure_filename
 
