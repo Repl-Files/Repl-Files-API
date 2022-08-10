@@ -58,7 +58,6 @@ def upload():
     file = request.files['file']
     username = data['username']
     file_name = secure_filename(file.filename)
-    file.save("files/" + username + "/" + file_name)
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
     if file_size > 2000000:
@@ -70,6 +69,7 @@ def upload():
       os.makedirs("files/" + username)
     if os.path.exists("files/" + username + "/" + file_name):
       return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=You%20can%20not%20upload%20the%20same%20file%20again')
+    file.save("files/" + username + "/" + file_name)
     if get_user(username) == False:
       create_user(username, file_size)
     else:
