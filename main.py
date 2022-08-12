@@ -2,6 +2,8 @@ import pymongo
 import os
 from flask import Flask, redirect, send_file, request
 from werkzeug.utils import secure_filename
+import datetime
+# from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 clientm = pymongo.MongoClient(os.getenv("clientm"))
@@ -99,6 +101,37 @@ def download(username, filename):
     return send_file(f"files/{username}/" + filename)
   else:
     return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=That%20file%20is%20not%20found')
+
+
+@app.route("/feedback", methods=['GET','POST'])
+def feedback():
+    if request.method == "GET": return redirect('https://replfiles.dillonb07.studio/dashboard')
+    data = request.form
+
+    """
+    Incoming data:
+    Username - str
+    Title - str
+    Type - str (type of feedback)
+    Content - str    
+    """
+    username = data['username']
+    title = data['title']
+    type = data['type']
+    content = data['content']
+    current_time = datetime.datetime.now.strftime('%d/%m/%Y-%H:%M:%S')
+
+    filename=f'{title}-{current_time}'
+    if not os.path.exists(f"feedback/{type}/{username}"):
+      os.makedirs(f"feedback/{type}/{username}")
+
+    file = f"{title} ({type}) by @{username} - {current_time}\n\n{content}"
+    
+    f = open(filename, 'w')
+    f.write(file)
+    f.close()
+    
+    return redirect('https://replfiles.dillonb07.studio/dashboard?type=success&msg=Feedback%20successfully%20sent')
   
 
 app.run(host='0.0.0.0', port=8080, debug=True)
