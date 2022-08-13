@@ -3,7 +3,7 @@ import os
 from flask import Flask, redirect, send_file, request
 from werkzeug.utils import secure_filename
 import datetime
-# from zoneinfo import ZoneInfo
+# from zoneinfo import ZoneInfo # py 3.9 and later. argh!!!!
 
 app = Flask(__name__)
 clientm = pymongo.MongoClient(os.getenv("clientm"))
@@ -119,19 +119,20 @@ def feedback():
     title = data['title']
     type = data['type']
     content = data['content']
-    current_time = datetime.datetime.now.strftime('%d/%m/%Y-%H:%M:%S')
+    current_time = datetime.datetime.now().strftime('%d/%m/%Y-%H:%M:%S')
 
-    filename=f'{title}-{current_time}'
-    if not os.path.exists(f"feedback/{type}/{username}"):
-      os.makedirs(f"feedback/{type}/{username}")
+    folder = f'feedback/{type}/{username}'
+    filename = secure_filename(f'{title}-{current_time}')
+    if not os.path.exists(folder):
+      os.makedirs(folder)
 
-    file = f"{title} ({type}) by @{username} - {current_time}\n\n{content}"
+    file = f"{title} ({type}) by @{username} - {current_time} UTC\n\n{content}"
     
-    f = open(filename, 'w')
+    f = open(f'{folder}/{filename}.txt', 'w')
     f.write(file)
     f.close()
     
-    return redirect('https://replfiles.dillonb07.studio/dashboard?type=success&msg=Feedback%20successfully%20sent')
+    return redirect('https://replfiles.dillonb07.studio/dashboard?type=success&msg=Feedback%20successfully%20submitted')
   
 
 app.run(host='0.0.0.0', port=8080, debug=True)
