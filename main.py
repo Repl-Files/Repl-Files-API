@@ -110,8 +110,8 @@ def upload():
     file = {
       "name": data['name'],
       "description": data['description'],
-      "filename": secure_filename(file['filename']),
-      "file": "https://replfiles.api.dillonb07.studio/download/" + file_name,
+      "filename": secure_filename(file.filename),
+      "file": "https://replfiles.api.dillonb07.studio/download/" + secure_filename(file.filename),
       "username": username,
       "imageUrl": image_url,
       "fileSize": file_size
@@ -136,14 +136,6 @@ def download(username, filename):
 def feedback():
     if request.method == "GET": return redirect('https://replfiles.dillonb07.studio/dashboard')
     data = request.form
-
-    """
-    Incoming data:
-    Username - str
-    Title - str
-    Type - str (type of feedback)
-    Content - str    
-    """
     username = data['username']
     title = data['title']
     type = data['type']
@@ -169,12 +161,22 @@ def feedback():
 def delete():
     # Return errors as a JSON object like this : {'error': {'msg': 'ERROR MESSAGE'}}. Otherwise, return {'success': {'msg': 'SUCCESS MESSAGE'}}
     data = request.get_json()
-    filename = data['file']
     username = data['username']
+    filename = username + '-' + data['file']
     if os.path.exists("files/" + filename):
       file_size = os.path.getsize("files/" + filename)
       modify_user(username ,(-1*file_size))
       os.remove(f"files/{filename}")
+      user = get_user(username)
+      new_user = user
+      for file in new_user['files']:
+          if file['filename'] == data['file']:
+              index = new_user['files'].index(file)
+              del new_user['files'][index]
+              break
+      userscol.delete_one({"_id": new_user['_id']})
+      userscol.insert_many([new_user])
+  
       response = app.response_class(
           response=json.dumps({"success": {'msg': f'Successfully deleted {filename}'}}),
           status=200,
