@@ -21,24 +21,6 @@ def request_entity_too_large(error):
     return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=File%20is%20over%202MB')
 
 
-
-# def get_size(file):
-#     if file.content_length:
-#         return file.content_length
-
-#     try:
-#         pos = file.tell()
-#         file.seek(0, 2)  #seek to end
-#         size = file.tell()
-#         file.seek(pos)  # back to original position
-#         return size
-#     except (AttributeError, IOError):
-#         pass
-
-#     # in-memory file object that doesn't support seeking or tell
-#     return 0  #assume small enough
-
-
 def get_all_files():
   files = []
   for user in userscol.find():
@@ -97,6 +79,10 @@ def upload():
     if file_size > (2*1024*1024):
       os.remove(f"files/{file_name}")
       return redirect("https://replfiles.dillonb07.studio/dashboard?type=error&msg=File%20is%20over%202MB")
+    for f in get_user(username)['files']:
+        if f['name'] == data['name']:
+            os.remove(f'files/{file_name}')
+            return redirect('https://replfiles.dillonb07.studio/dasboard?type=error&msg=Files%20must%20have%20unique%20names')
     if get_user(username) != False:
       if get_user(username)['spaceUsed'] > (10*1024*1024):
         os.remove(f"files/{file_name}")
@@ -107,7 +93,7 @@ def upload():
       modify_user(username, file_size)
     user = get_user(username)
     image_url = data.get("imageUrl", "")
-    file = {
+    file2 = {
       "name": data['name'],
       "description": data['description'],
       "filename": secure_filename(file.filename),
@@ -117,7 +103,7 @@ def upload():
       "fileSize": file_size
     }
     files = user['files']
-    files.append(file)
+    files.append(file2)
     del user['files']
     user['files'] = files
     userscol.delete_one({"_id": user['_id']})
@@ -178,17 +164,25 @@ def delete():
       userscol.insert_many([new_user])
   
       response = app.response_class(
-          response=json.dumps({"success": {'msg': f'Successfully deleted {filename}'}}),
+          response=json.dumps({"type": 'success', 'msg': f'Successfully deleted {filename}'}),
           status=200,
           mimetype='application/json'
       )
       return response
     else:
       response = app.response_class(
-          response=json.dumps({"error": {'msg': f"{filename} doesn't exist"}}),
-          status=200,
+          response=json.dumps({"type": 'error', 'msg': f"{filename} doesn't exist"}),
+          status=404,
           mimetype='application/json'
       )
       return response
 
-app.run(host='0.0.0.0', port=8080, debug=True)
+@app.route('/get/<username>/<file>')
+def get_file(username, file):
+    user = get_user(username)
+    for f in user['files']:
+        if f['name'] == file:
+            return json.dumps(f)
+    return {'type': 'error', 'msg':'File not found'}
+
+# app.run(host='0.0.0.0', port=8080)
