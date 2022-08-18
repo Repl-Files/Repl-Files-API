@@ -16,6 +16,12 @@ userscol = usersdb.users
 app.config['UPLOAD_FOLDER'] = '/files'
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Max file size
 
+@app.after_request
+def apply_caching(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://replfiles.dillonb07.studio"
+    return response
+
+
 @app.errorhandler(413)
 def request_entity_too_large(error):
     return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=File%20is%20over%202MB')
@@ -53,7 +59,8 @@ def modify_user(username, count):
 
 @app.route('/')
 def index():
-    return redirect('https://replfiles.dillonb07.studio')
+    # return redirect('https://replfiles.dillonb07.studio')
+    return 'No'
 
 @app.route("/all")
 def all_files():
