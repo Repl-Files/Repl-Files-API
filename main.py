@@ -18,7 +18,8 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Max file size
 
 @app.after_request
 def apply_caching(response):
-    response.headers["Access-Control-Allow-Origin"] = "https://replfiles.dillonb07.studio"
+    response.headers["Access-Control-Allow-Origin"] = '*'
+    # "https://replfiles.dillonb07.studio"
     return response
 
 
@@ -104,7 +105,7 @@ def upload():
       "name": data['name'],
       "description": data['description'],
       "filename": secure_filename(file.filename),
-      "file": "https://replfiles.api.dillonb07.studio/download/" + secure_filename(file.filename),
+      "file": "https://replfiles.api.dillonb07.studio/download/" + username + '/' + secure_filename(file.filename),
       "username": username,
       "imageUrl": image_url,
       "fileSize": file_size
