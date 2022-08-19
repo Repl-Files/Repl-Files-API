@@ -120,7 +120,7 @@ def upload():
 
 @app.route("/download/<username>/<filename>")
 def download(username, filename):
-  if os.path.exists(f"files/"  + filename):
+  if os.path.exists(f"files/{username}-{filename}"):
     return send_file(f"files/{username}-{filename}")
   else:
     return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=That%20file%20is%20not%20found')
