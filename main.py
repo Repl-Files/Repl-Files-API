@@ -18,8 +18,7 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Max file size
 
 @app.after_request
 def apply_caching(response):
-    response.headers["Access-Control-Allow-Origin"] = '*'
-    # "https://replfiles.dillonb07.studio"
+    response.headers["Access-Control-Allow-Origin"] = "https://replfiles.dillonb07.studio"
     return response
 
 
