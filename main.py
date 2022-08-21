@@ -14,7 +14,7 @@ usersdb = clientm.Users
 userscol = usersdb.users
 
 app.config['UPLOAD_FOLDER'] = '/files'
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Max file size
+app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024  # Max file size
 
 @app.after_request
 def apply_caching(response):
@@ -24,7 +24,7 @@ def apply_caching(response):
 
 @app.errorhandler(413)
 def request_entity_too_large(error):
-    return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=File%20is%20over%202MB')
+    return redirect('https://replfiles.dillonb07.studio/dashboard?type=error&msg=File%20is%20over%2015MB')
 
 
 def get_all_files():
@@ -91,9 +91,9 @@ def upload():
             os.remove(f'files/{file_name}')
             return redirect('https://replfiles.dillonb07.studio/dasboard?type=error&msg=Files%20must%20have%20unique%20names')
     if get_user(username) != False:
-      if get_user(username)['spaceUsed'] > (10*1024*1024):
+      if get_user(username)['spaceUsed'] > (15*1024*1024):
         os.remove(f"files/{file_name}")
-        return redirect("https://replfiles.dillonb07.studio/dashboard?type=error&msg=You%20have%20used%20all%20of%20your%2010MB")
+        return redirect("https://replfiles.dillonb07.studio/dashboard?type=error&msg=You%20have%20used%20all%20of%20your%2015MB")
     if get_user(username) == False:
       create_user(username, file_size)
     else:
